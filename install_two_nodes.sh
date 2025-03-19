@@ -23,17 +23,23 @@ echo "创建 EDGE 目录：$EDGE_DIR"
 mkdir -p "$EDGE_DIR"
 cd "$EDGE_DIR" || { echo -e "${RED}进入 EDGE 目录失败！${NC}"; exit 1; }
 
-# 提示输入私钥（强制从终端读取）
+# 提示输入私钥（使用 read 替代 cat，支持管道）
 echo -e "${GREEN}请输入私钥（每行一个，输入完成后按 Ctrl+D 保存）：${NC}"
-cat /dev/tty > "$HOME/key.txt" # 从终端读取输入
+> "$HOME/key.txt" # 清空文件
+while IFS= read -r line; do
+  echo "$line" >> "$HOME/key.txt"
+done < /dev/tty
 if [ ! -s "$HOME/key.txt" ]; then
   echo -e "${RED}错误：未输入任何私钥！${NC}"
   exit 1
 fi
 
-# 提示输入代理（强制从终端读取）
+# 提示输入代理（使用 read 替代 cat）
 echo -e "${GREEN}请输入代理地址（每行一个，与私钥数量匹配，留空表示直连，输入完成后按 Ctrl+D 保存）：${NC}"
-cat /dev/tty > "$HOME/proxy.txt" # 从终端读取输入
+> "$HOME/proxy.txt" # 清空文件
+while IFS= read -r line; do
+  echo "$line" >> "$HOME/proxy.txt"
+done < /dev/tty
 if [ ! -s "$HOME/proxy.txt" ]; then
   echo -e "${RED}警告：未输入任何代理地址，将全部使用直连！${NC}"
 fi
@@ -91,7 +97,6 @@ API_REQUEST_TIMEOUT=100
 POINTS_API=http://127.0.0.1:8080
 PRIVATE_KEY='$PRIVATE_KEY'
 EOF
-  # 如果代理不为空，添加代理配置
   if [ -n "$PROXY" ]; then
     echo "HTTP_PROXY=$PROXY" >> .env
     echo "HTTPS_PROXY=$PROXY" >> .env
@@ -124,12 +129,12 @@ ps aux | grep -E "light-node|risc0-merkle-service"
 COLORS=("$YELLOW" "$BLUE" "$PURPLE" "$CYAN" "$GREEN")
 echo -e "${GREEN}显示每个账户的动态运行日志（最近 10 行）：${NC}"
 for ((j=1; j<i; j++)); do
-  PROXY=$(sed -n "${j}p" "$HOME/proxy.txt") # 获取对应代理地址
-  COLOR_INDEX=$(( (j-1) % ${#COLORS[@]} )) # 循环使用颜色
+  PROXY=$(sed -n "${j}p" "$HOME/proxy.txt")
+  COLOR_INDEX=$(( (j-1) % ${#COLORS[@]} ))
   COLOR=${COLORS[$COLOR_INDEX]}
   
   echo -e "${COLOR}账户 $j（代理地址: ${PROXY:-直连}） CLI 日志：${NC}"
-  tail -n 10 "$EDGE_DIR/light-node-$j/node$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g' # 移除颜色码和乱码
+  tail -n 10 "$EDGE_DIR/light-node-$j/node$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g'
   echo -e "${COLOR}账户 $j（代理地址: ${PROXY:-直连}） Merkle 日志：${NC}"
   tail -n 10 "$EDGE_DIR/light-node-$j/merkle$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g'
   echo -e "${GREEN}------------------------${NC}"
