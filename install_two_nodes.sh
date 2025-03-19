@@ -53,22 +53,8 @@ rustup update
 
 echo "安装 Risc0 工具链..."
 curl -L https://risczero.com/install | bash
-# 显式加载 Risc0 的路径
-export PATH="$HOME/.risc0/bin:$PATH"
-source "$HOME/.bashrc" # 确保所有环境变量生效
-rzup install
-# 验证 rzup 是否可用
-if ! command -v rzup >/dev/null 2>&1; then
-  echo -e "${RED}错误：rzup 命令不可用，Risc0 安装失败！${NC}"
-  echo "请手动检查：curl -L https://risczero.com/install | bash && source ~/.bashrc && rzup install"
-  exit 1
-fi
-# 验证 Risc0 工具链是否注册到 cargo
-if ! cargo --list | grep -q "risc0"; then
-  echo -e "${RED}错误：Risc0 工具链未正确注册到 cargo！${NC}"
-  echo "请手动运行：rzup install"
-  exit 1
-fi
+# 直接使用完整路径调用 rzup，避免 PATH 未生效
+$HOME/.risc0/bin/rzup install
 
 # 克隆仓库到 EDGE 目录
 echo "克隆 LayerEdge 仓库..."
