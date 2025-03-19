@@ -23,7 +23,7 @@ echo "创建 EDGE 目录：$EDGE_DIR"
 mkdir -p "$EDGE_DIR"
 cd "$EDGE_DIR" || { echo -e "${RED}进入 EDGE 目录失败！${NC}"; exit 1; }
 
-# 提示输入私钥（使用 read 替代 cat，支持管道）
+# 提示输入私钥
 echo -e "${GREEN}请输入私钥（每行一个，输入完成后按 Ctrl+D 保存）：${NC}"
 > "$HOME/key.txt" # 清空文件
 while IFS= read -r line; do
@@ -34,7 +34,7 @@ if [ ! -s "$HOME/key.txt" ]; then
   exit 1
 fi
 
-# 提示输入代理（使用 read 替代 cat）
+# 提示输入代理
 echo -e "${GREEN}请输入代理地址（每行一个，与私钥数量匹配，留空表示直连，输入完成后按 Ctrl+D 保存）：${NC}"
 > "$HOME/proxy.txt" # 清空文件
 while IFS= read -r line; do
