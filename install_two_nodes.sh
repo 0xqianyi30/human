@@ -34,24 +34,6 @@ if [ ! -s "$HOME/key.txt" ]; then
   exit 1
 fi
 
-# 提示输入代理
-echo -e "${GREEN}请输入代理地址（每行一个，与私钥数量匹配，留空表示直连，输入完成后按 Ctrl+D 保存）：${NC}"
-> "$HOME/proxy.txt" # 清空文件
-while IFS= read -r line; do
-  echo "$line" >> "$HOME/proxy.txt"
-done < /dev/tty
-if [ ! -s "$HOME/proxy.txt" ]; then
-  echo -e "${YELLOW}警告：未输入任何代理地址，将全部使用直连！${NC}"
-fi
-
-# 检查私钥和代理数量
-KEY_COUNT=$(wc -l < "$HOME/key.txt")
-PROXY_COUNT=$(wc -l < "$HOME/proxy.txt")
-if [ "$PROXY_COUNT" -gt 0 ] && [ "$KEY_COUNT" -ne "$PROXY_COUNT" ]; then
-  echo -e "${RED}错误：私钥 ($KEY_COUNT 行) 和代理 ($PROXY_COUNT 行) 数量不匹配！${NC}"
-  exit 1
-fi
-
 # 安装依赖（只执行一次）
 echo "更新系统并安装基本工具..."
 apt update && apt upgrade -y
@@ -77,21 +59,17 @@ rzup install
 echo "克隆 LayerEdge 仓库..."
 git clone https://github.com/Layer-Edge/light-node.git "$EDGE_DIR/base-light-node"
 
-# 读取私钥和代理，循环安装
+# 读取私钥，循环安装
 i=1
-while IFS= read -r PRIVATE_KEY && ( [ "$PROXY_COUNT" -eq 0 ] || IFS= read -r PROXY <&3 ); do
-  # 如果代理文件为空，PROXY 保持为空
-  if [ "$PROXY_COUNT" -eq 0 ]; then
-    PROXY=""
-  fi
-  echo -e "${GREEN}安装账户 $i（私钥: ${PRIVATE_KEY:0:6}...，代理: ${PROXY:-直连}）...${NC}"
+while IFS= read -r PRIVATE_KEY; do
+  echo -e "${GREEN}安装账户 $i（私钥: ${PRIVATE_KEY:0:6}...，默认直连）...${NC}"
 
   # 创建独立目录
   NODE_DIR="$EDGE_DIR/light-node-$i"
   cp -r "$EDGE_DIR/base-light-node" "$NODE_DIR"
   cd "$NODE_DIR" || { echo -e "${RED}进入目录失败！${NC}"; exit 1; }
 
-  # 配置环境变量（代理为空时不设置）
+  # 配置环境变量（无代理，默认直连）
   PORT=$((3000 + i))
   cat <<EOF > .env
 GRPC_URL=34.31.74.109:9090
@@ -101,10 +79,6 @@ API_REQUEST_TIMEOUT=100
 POINTS_API=http://127.0.0.1:8080
 PRIVATE_KEY='$PRIVATE_KEY'
 EOF
-  if [ -n "$PROXY" ]; then
-    echo "HTTP_PROXY=$PROXY" >> .env
-    echo "HTTPS_PROXY=$PROXY" >> .env
-  fi
   source .env
 
   # 启动 Merkle 服务
@@ -123,7 +97,7 @@ EOF
 
   echo -e "${GREEN}账户 $i 安装完成！${NC}"
   i=$((i + 1))
-done < "$HOME/key.txt" 3< "$HOME/proxy.txt"
+done < "$HOME/key.txt"
 
 # 检查运行状态
 echo -e "${GREEN}检查所有节点运行状态...${NC}"
@@ -133,17 +107,12 @@ ps aux | grep -E "light-node|risc0-merkle-service"
 COLORS=("$YELLOW" "$BLUE" "$PURPLE" "$CYAN" "$GREEN")
 echo -e "${GREEN}显示每个账户的动态运行日志（最近 10 行）：${NC}"
 for ((j=1; j<i; j++)); do
-  if [ "$PROXY_COUNT" -gt 0 ]; then
-    PROXY=$(sed -n "${j}p" "$HOME/proxy.txt")
-  else
-    PROXY=""
-  fi
   COLOR_INDEX=$(( (j-1) % ${#COLORS[@]} ))
   COLOR=${COLORS[$COLOR_INDEX]}
   
-  echo -e "${COLOR}账户 $j（代理地址: ${PROXY:-直连}） CLI 日志：${NC}"
+  echo -e "${COLOR}账户 $j（默认直连） CLI 日志：${NC}"
   tail -n 10 "$EDGE_DIR/light-node-$j/node$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g'
-  echo -e "${COLOR}账户 $j（代理地址: ${PROXY:-直连}） Merkle 日志：${NC}"
+  echo -e "${COLOR}账户 $j（默认直连） Merkle 日志：${NC}"
   tail -n 10 "$EDGE_DIR/light-node-$j/merkle$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g'
   echo -e "${GREEN}------------------------${NC}"
 done
