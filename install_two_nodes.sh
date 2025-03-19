@@ -41,15 +41,14 @@ apt install -y git curl build-essential
 
 echo "安装 Go 1.21..."
 wget https://golang.org/dl/go1.21.0.linux-amd64.tar.gz
+rm -rf /usr/local/go # 清理旧安装
 tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz
-# 直接设置 PATH，避免 source 不生效
-export PATH="$PATH:/usr/local/go/bin"
-# 验证 Go 是否可用
+rm go1.21.0.linux-amd64.tar.gz
+# 验证 Go
 if ! /usr/local/go/bin/go version >/dev/null 2>&1; then
   echo -e "${RED}错误：Go 安装失败！${NC}"
   exit 1
 fi
-rm go1.21.0.linux-amd64.tar.gz
 
 echo "安装 Rust..."
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -62,6 +61,7 @@ $HOME/.risc0/bin/rzup install
 
 # 克隆仓库到 EDGE 目录
 echo "克隆 LayerEdge 仓库..."
+rm -rf "$EDGE_DIR/base-light-node" # 清理旧目录
 git clone https://github.com/Layer-Edge/light-node.git "$EDGE_DIR/base-light-node"
 
 # 读取私钥，循环安装
@@ -71,6 +71,7 @@ while IFS= read -r PRIVATE_KEY; do
 
   # 创建独立目录
   NODE_DIR="$EDGE_DIR/light-node-$i"
+  rm -rf "$NODE_DIR" # 清理旧目录
   cp -r "$EDGE_DIR/base-light-node" "$NODE_DIR"
   cd "$NODE_DIR" || { echo -e "${RED}进入目录失败！${NC}"; exit 1; }
 
