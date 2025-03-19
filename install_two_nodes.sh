@@ -41,13 +41,13 @@ while IFS= read -r line; do
   echo "$line" >> "$HOME/proxy.txt"
 done < /dev/tty
 if [ ! -s "$HOME/proxy.txt" ]; then
-  echo -e "${RED}警告：未输入任何代理地址，将全部使用直连！${NC}"
+  echo -e "${YELLOW}警告：未输入任何代理地址，将全部使用直连！${NC}"
 fi
 
-# 检查私钥和代理数量是否匹配
+# 检查私钥和代理数量
 KEY_COUNT=$(wc -l < "$HOME/key.txt")
 PROXY_COUNT=$(wc -l < "$HOME/proxy.txt")
-if [ "$KEY_COUNT" -ne "$PROXY_COUNT" ]; then
+if [ "$PROXY_COUNT" -gt 0 ] && [ "$KEY_COUNT" -ne "$PROXY_COUNT" ]; then
   echo -e "${RED}错误：私钥 ($KEY_COUNT 行) 和代理 ($PROXY_COUNT 行) 数量不匹配！${NC}"
   exit 1
 fi
@@ -79,7 +79,11 @@ git clone https://github.com/Layer-Edge/light-node.git "$EDGE_DIR/base-light-nod
 
 # 读取私钥和代理，循环安装
 i=1
-while IFS= read -r PRIVATE_KEY && IFS= read -r PROXY <&3; do
+while IFS= read -r PRIVATE_KEY && ( [ "$PROXY_COUNT" -eq 0 ] || IFS= read -r PROXY <&3 ); do
+  # 如果代理文件为空，PROXY 保持为空
+  if [ "$PROXY_COUNT" -eq 0 ]; then
+    PROXY=""
+  fi
   echo -e "${GREEN}安装账户 $i（私钥: ${PRIVATE_KEY:0:6}...，代理: ${PROXY:-直连}）...${NC}"
 
   # 创建独立目录
@@ -129,7 +133,11 @@ ps aux | grep -E "light-node|risc0-merkle-service"
 COLORS=("$YELLOW" "$BLUE" "$PURPLE" "$CYAN" "$GREEN")
 echo -e "${GREEN}显示每个账户的动态运行日志（最近 10 行）：${NC}"
 for ((j=1; j<i; j++)); do
-  PROXY=$(sed -n "${j}p" "$HOME/proxy.txt")
+  if [ "$PROXY_COUNT" -gt 0 ]; then
+    PROXY=$(sed -n "${j}p" "$HOME/proxy.txt")
+  else
+    PROXY=""
+  fi
   COLOR_INDEX=$(( (j-1) % ${#COLORS[@]} ))
   COLOR=${COLORS[$COLOR_INDEX]}
   
