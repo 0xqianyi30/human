@@ -23,17 +23,17 @@ echo "创建 EDGE 目录：$EDGE_DIR"
 mkdir -p "$EDGE_DIR"
 cd "$EDGE_DIR" || { echo -e "${RED}进入 EDGE 目录失败！${NC}"; exit 1; }
 
-# 提示输入私钥
+# 提示输入私钥（强制从终端读取）
 echo -e "${GREEN}请输入私钥（每行一个，输入完成后按 Ctrl+D 保存）：${NC}"
-cat > "$HOME/key.txt" # 用户批量输入私钥，Ctrl+D 结束
+cat /dev/tty > "$HOME/key.txt" # 从终端读取输入
 if [ ! -s "$HOME/key.txt" ]; then
   echo -e "${RED}错误：未输入任何私钥！${NC}"
   exit 1
 fi
 
-# 提示输入代理
+# 提示输入代理（强制从终端读取）
 echo -e "${GREEN}请输入代理地址（每行一个，与私钥数量匹配，留空表示直连，输入完成后按 Ctrl+D 保存）：${NC}"
-cat > "$HOME/proxy.txt" # 用户批量输入代理，Ctrl+D 结束
+cat /dev/tty > "$HOME/proxy.txt" # 从终端读取输入
 if [ ! -s "$HOME/proxy.txt" ]; then
   echo -e "${RED}警告：未输入任何代理地址，将全部使用直连！${NC}"
 fi
@@ -129,7 +129,7 @@ for ((j=1; j<i; j++)); do
   COLOR=${COLORS[$COLOR_INDEX]}
   
   echo -e "${COLOR}账户 $j（代理地址: ${PROXY:-直连}） CLI 日志：${NC}"
-  tail -n 10 "$EDGE_DIR/light-node-$j/node$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g' # 移除可能的颜色码和乱码
+  tail -n 10 "$EDGE_DIR/light-node-$j/node$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g' # 移除颜色码和乱码
   echo -e "${COLOR}账户 $j（代理地址: ${PROXY:-直连}） Merkle 日志：${NC}"
   tail -n 10 "$EDGE_DIR/light-node-$j/merkle$j.log" | sed 's/\x1B\[[0-9;]*[mK]//g'
   echo -e "${GREEN}------------------------${NC}"
