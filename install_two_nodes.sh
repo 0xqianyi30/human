@@ -53,7 +53,14 @@ rustup update
 
 echo "安装 Risc0 工具链..."
 curl -L https://risczero.com/install | bash
+source $HOME/.cargo/env # 确保环境变量生效
 rzup install
+# 验证 Risc0 工具链是否安装成功
+if ! cargo --list | grep -q "risc0"; then
+  echo -e "${RED}错误：Risc0 工具链安装失败！尝试手动安装：${NC}"
+  echo "curl -L https://risczero.com/install | bash && rzup install"
+  exit 1
+fi
 
 # 克隆仓库到 EDGE 目录
 echo "克隆 LayerEdge 仓库..."
@@ -69,7 +76,7 @@ while IFS= read -r PRIVATE_KEY; do
   cp -r "$EDGE_DIR/base-light-node" "$NODE_DIR"
   cd "$NODE_DIR" || { echo -e "${RED}进入目录失败！${NC}"; exit 1; }
 
-  # 配置环境变量（无代理，默认直连）
+  # 配置环境变量（默认直连）
   PORT=$((3000 + i))
   cat <<EOF > .env
 GRPC_URL=34.31.74.109:9090
