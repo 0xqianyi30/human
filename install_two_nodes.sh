@@ -42,8 +42,13 @@ apt install -y git curl build-essential
 echo "安装 Go 1.21..."
 wget https://golang.org/dl/go1.21.0.linux-amd64.tar.gz
 tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz
-echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
-source ~/.bashrc
+# 直接设置 PATH，避免 source 不生效
+export PATH="$PATH:/usr/local/go/bin"
+# 验证 Go 是否可用
+if ! /usr/local/go/bin/go version >/dev/null 2>&1; then
+  echo -e "${RED}错误：Go 安装失败！${NC}"
+  exit 1
+fi
 rm go1.21.0.linux-amd64.tar.gz
 
 echo "安装 Rust..."
@@ -53,7 +58,6 @@ rustup update
 
 echo "安装 Risc0 工具链..."
 curl -L https://risczero.com/install | bash
-# 直接使用完整路径调用 rzup，避免 PATH 未生效
 $HOME/.risc0/bin/rzup install
 
 # 克隆仓库到 EDGE 目录
@@ -92,7 +96,7 @@ EOF
   # 启动 CLI 节点
   echo "构建并启动 CLI 节点（账户 $i）..."
   cd "$NODE_DIR"
-  go build || { echo -e "${RED}CLI 节点构建失败！${NC}"; exit 1; }
+  /usr/local/go/bin/go build || { echo -e "${RED}CLI 节点构建失败！${NC}"; exit 1; }
   ./light-node > "$NODE_DIR/node$i.log" 2>&1 &
   sleep 5
 
@@ -124,5 +128,6 @@ for ((j=1; j<i; j++)); do
   echo "  - 账户 $j CLI: $EDGE_DIR/light-node-$j/node$j.log"
   echo "  - 账户 $j Merkle: $EDGE_DIR/light-node-$j/merkle$j.log"
 done
+echo "EDGE 目录位置：$EDGE_DIR"
 echo "下一步：访问 https://dashboard.layeredge.io 连接钱包和公钥。"
 echo "实时查看日志：tail -f $EDGE_DIR/light-node-<编号>/node<编号>.log"
